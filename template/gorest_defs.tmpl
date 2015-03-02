@@ -1,0 +1,12 @@
+// server structure definitions
+package main
+
+import (
+)
+
+{{range .Definitions}}
+type {{.Name}} struct {
+	{{range .Members}}{{.Name}}	{{.Type}}	`sw.description:"{{.Description}}"{{if .Required}} sw.required:"true"{{end}}`
+	{{end}}
+}
+{{end}}

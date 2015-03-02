@@ -1,0 +1,22 @@
+{n{$meta_left := "{"}}
+{{$meta_right := "}"}}
+// main server configuration
+@PerThread
+@API(value="{{.BasePath}}",description="{{.Description}}",
+basePath="{{.BasePath}}")
+public class {{.ServiceName}} {
+
+	private @Inject ;
+	private static final ExecutorService TASK_EXECUTOR = Executors.newCachedThreadPool();
+
+{{range .Methods}}
+	@{{.HTTPMethod}}
+	@Path(value = "{{.Path}}")
+	@Produces(MediaType.{{ArrayToString .Produces}})
+	@Consuems(MediaType.{{ArrayToString .Consumes}})
+	public Response {{.LowerOperationId}}({{range .PathParam}}@PathParam("{{.Name}}"){{.Type}} {{.Name}},{{end}}) throws Exception
+	{
+		return Response.status(200).entity({{range .BodyParam}}{{.Name}}{{end}}).build();
+	}
+{{end}}
+}

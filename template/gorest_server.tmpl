@@ -1,0 +1,56 @@
+{{$meta_left := "{"}}
+{{$meta_right := "}"}}
+// main server configuration
+package main
+
+import (
+	"github.com/rmullinnix/gorest"
+	"github.com/rmullinnix/gorest/swagger"
+	"github.com/rmullinnix/logger"
+	"flag"
+	"net/http"
+	"strconv"
+)
+
+// service definition
+type {{.ServiceName}}Service struct {
+	gorest.RestService      `root:"{{.BasePath}}" consumes:"{{ArrayToString .Consumes}}"
+				  produces:"{{ArrayToString .Produces}}"
+				  swagger:"/swagger" sw.apiVersion:"{{.ServiceVersion}}"
+				  sw.title:"{{.Title}}" sw.licenseName:"{{.LicenseName}}"
+				  sw.description:{{QuoteString .Description}}
+				  sw.contactUrl:"{{.ContactUrl}}" sw.contactEmail:"{{.ContactEmail}}"`
+	{{range .SecurityDefs}}{{.Key}}	gorest.Security `mode:"{{.Mode}}" location:"{{.Location}}" name:"{{.Name}}" prefix:"{{.Prefix}}"`
+	{{end}}{{range .Methods}}{{$lens := len .Schema}}{{$lenr := lenresp .Responses 1}}{{$lensec := len .Security}}
+		{{FirstLower .OperationId}}	gorest.EndPoint `method:"{{.HTTPMethod}}" path:"{{.DefPath}}" {{if gt $lens 0}}output:"{{.Schema}}"{{end}} {{range .BodyParam}}postdata:"{{.Type}}"{{end}} {{if gt $lensec 0}}security:"{{.Security}}"{{end}}
+					  sw.summary:"{{.Summary}}"
+					  sw.notes:"{{.Notes}}"
+					  sw.nickname:"{{.OperationId}}" sw.tags:"{{ArrayToString .Tags}}"
+					  sw.response:"{{range $index, $element := .Responses}}{{$leno := len .Output}}{{$meta_left}}{{.Code}}:{{.Description}}{{if gt $leno 0}}:output{{end}}{{$meta_right}}{{if lt $index $lenr}},{{end}}{{end}}"`
+	{{end}}
+}
+
+// Service main()
+func main() {
+        portPtr := flag.Int("port", 7676, "port number for service")
+        logPtr := flag.String("log_level", "error", "logging level for service - trace, info, warn or error")
+
+        flag.Parse()
+
+        port := *portPtr
+        listen := ":" + strconv.Itoa(port)
+
+        logger.Init(*logPtr)
+
+	// gorest.RegisterRealmAuthorizer("{{.ServiceName}}", authorize.ResourceAuthorizer)
+
+	gorest.RegisterDocumentor("swagger", swagger.NewSwaggerDocumentor("2.0"))
+
+        gorest.RegisterService(new({{.ServiceName}}Service))
+
+        http.Handle("/", gorest.Handle())
+        err := http.ListenAndServe(listen, nil)
+	if err != nil {
+		panic(err)
+	}
+}

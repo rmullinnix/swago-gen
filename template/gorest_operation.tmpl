@@ -1,0 +1,15 @@
+// server operations configuration
+package main
+
+import (
+)
+
+{{range .Methods}}
+{{$lenp := lenparms .Params 1}}
+{{$lens := len .Schema}}
+func (svc {{.ServiceName}}Service) {{FirstUpper .OperationId}}({{range $index, $element := .Params}}{{.Name}} {{.Type}}{{if lt $index $lenp}}, {{end}}{{end}}) {{.Schema}} {
+	{{if gt $lens 0}}	var output	{{.Schema}}{{end}}
+
+	{{if gt $lens 0}}	return output{{end}}
+}
+{{end}}

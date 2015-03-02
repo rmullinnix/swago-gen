@@ -1,0 +1,1 @@
+# swago-gen
