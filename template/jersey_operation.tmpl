@@ -1,15 +1,45 @@
+
 // server operations configuration
-package main
+package {{.Package}}.endpoints;
 
-import (
-)
-
-{{range .Methods}}
-{{$lenp := lenparms .Params 1}}
-{{$lens := len .Schema}}
-func (svc {{.ServiceName}}Service) {{.OperationId}}({{range $index, $element := .Params}}{{.Name}} {{.Type}}{{if lt $index $lenp}}, {{end}}{{end}}) {{.Schema}} {
-	{{if gt $lens 0}}	var output	{{.Schema}}{{end}}
-
-	{{if gt $lens 0}}	return output{{end}}
-}
+import javax.json.Json;
+import javax.json.JsonObject;
+{{range .Methods}}import javax.ws.rs.{{.HTTPMethod}};
 {{end}}
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+import org.springframework.stereotype.Component;
+
+import com.assurant.inc.transformation.services.{{.ServiceName}};
+import com.wordnik.swagger.annotations.Api;
+import com.wordnik.swagger.annotations.ApiOperation;
+import com.wordnik.swagger.annotations.ApiResponse;
+import com.wordnik.swagger.annotations.ApiResponses;
+
+@Component
+@Path("{{.Path}}")
+@Api(value = "{{.Path}}"
+public class {{FirstUpper .GroupName}}Endpoint {
+{{range .Methods}}{{$lenp := lenparms .Params 1}}{{$lens := len .Schema}}{{$lenr := lenresp .Responses 1}}
+
+	@{{.HTTPMethod}}
+	@Produces({ {{JavaMediaType .Produces}} })
+	@ApiOperation(value="{{.Summary}}",
+		description="{{.Description}}",
+		notes="{{.Notes}}",
+		produces={ {{JavaMediaType .Produces}} }, 
+		{{if gt $lens 0}}response={{.Schema}}.class,{{end}}httpMethod="{{.HTTPMethod}}",nickname="{{FirstUpper .OperationId}},
+		position=0)
+	@ApiResponses(value={ {{range $index, $element := .Responses}}
+		@ApiResponse(code={{.Code}}, message="{{.Description}}"){{if lt $index $lenr}},{{end}}{{end}}
+	})
+	public {{if gt $lens 0}}Response{{else}}void{{end}} {{FirstLower .OperationId}}({{range $index, $element := .Params}}{{JavaType .Type}} {{.Name}}{{if lt $index $lenp}}, {{end}}{{end}})
+	{
+		// JsonObject jsonObject=Json.createObjectBuilder();
+		return Response.ok(null, MediaType.APPLICATION_JSON_TYPE).build();
+	}
+{{end}}
+}

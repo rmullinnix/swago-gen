@@ -9,7 +9,7 @@ import (
 	"text/template"
 )
 
-func swagger20Spec(strJson string, conf *config) error {
+func swagger20Spec(strJson string, conf *config, pkgName string) error {
 	var doc20       SwaggerAPI20
 
 	err := json.Unmarshal([]byte(strJson), &doc20)
@@ -18,7 +18,7 @@ func swagger20Spec(strJson string, conf *config) error {
 		return err
 	}
 
-	svc := gen20TemplateStruct(&doc20, conf)
+	svc := gen20TemplateStruct(&doc20, conf, pkgName)
 
 	raw, err := ioutil.ReadFile("template/" + conf.ServerTemplate)
 	if err != nil {
@@ -30,7 +30,7 @@ func swagger20Spec(strJson string, conf *config) error {
 		return err
 	}
 
-	svcFile, err := os.Create(dir + "/" + svc.ServiceName + "_main.go")
+	svcFile, err := os.Create(dir + "/" + svc.ServiceName + "_main" + conf.Options.FileSuffix)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func swagger20Spec(strJson string, conf *config) error {
 		return err
 	}
 
-	defFile, err := os.Create(dir + "/" + svc.ServiceName + "_defs.go")
+	defFile, err := os.Create(dir + "/" + svc.ServiceName + "_defs" + conf.Options.FileSuffix)
 	err = defs.Execute(defFile, svc)
 	if err != nil {
 		return err
@@ -59,11 +59,12 @@ func swagger20Spec(strJson string, conf *config) error {
 	return nil
 }
 
-func gen20TemplateStruct(swSpec *SwaggerAPI20, conf *config) *serviceDefinition {
+func gen20TemplateStruct(swSpec *SwaggerAPI20, conf *config, pkgName string) *serviceDefinition {
 	svc := new(serviceDefinition)
 	svc.Methods = make([]Op, 0)
 
 	svc.ServiceName = RemoveSpace(swSpec.Info.Title)
+	svc.Package = pkgName
 	svc.BasePath = swSpec.BasePath
 	basePath = svc.BasePath
 	svc.Consumes = swSpec.Consumes
@@ -81,6 +82,7 @@ func gen20TemplateStruct(swSpec *SwaggerAPI20, conf *config) *serviceDefinition 
 			meth := populateOperation(key, path.Get)
 			meth.HTTPMethod = "GET"
 			meth.ServiceName = svc.ServiceName
+			meth.Package = svc.Package
 			svc.Methods = append(svc.Methods, *meth)
 			ops = append(ops, *meth)
 		}
@@ -88,6 +90,7 @@ func gen20TemplateStruct(swSpec *SwaggerAPI20, conf *config) *serviceDefinition 
 			meth := populateOperation(key, path.Put)
 			meth.HTTPMethod = "PUT"
 			meth.ServiceName = svc.ServiceName
+			meth.Package = svc.Package
 			svc.Methods = append(svc.Methods, *meth)
 			ops = append(ops, *meth)
 		}
@@ -95,6 +98,7 @@ func gen20TemplateStruct(swSpec *SwaggerAPI20, conf *config) *serviceDefinition 
 			meth := populateOperation(key, path.Post)
 			meth.HTTPMethod = "POST"
 			meth.ServiceName = svc.ServiceName
+			meth.Package = svc.Package
 			svc.Methods = append(svc.Methods, *meth)
 			ops = append(ops, *meth)
 		}
@@ -102,6 +106,7 @@ func gen20TemplateStruct(swSpec *SwaggerAPI20, conf *config) *serviceDefinition 
 			meth := populateOperation(key, path.Delete)
 			meth.HTTPMethod = "DELETE"
 			meth.ServiceName = svc.ServiceName
+			meth.Package = svc.Package
 			svc.Methods = append(svc.Methods, *meth)
 			ops = append(ops, *meth)
 		}
@@ -132,6 +137,7 @@ func populateOperation(key string, op *OperationObject) *Op {
 
 	meth.OperationId = RemoveSpace(op.OperationId)
 	meth.Summary = op.Summary
+	meth.Description = op.Description
 	meth.Notes = op.Description
 	meth.Tags = op.Tags
 	meth.Produces = op.Produces
@@ -145,9 +151,9 @@ func populateOperation(key string, op *OperationObject) *Op {
 	meth.DefPath = meth.Path
 	for i := range meth.PathParam {
 		item := meth.PathParam[i]
-		//name := FirstUpper(item.Name)
+		name := FirstUpper(item.Name)
 
-		meth.DefPath = strings.Replace(meth.DefPath, item.Name, item.Name + ":" + item.Type, 1)
+		meth.DefPath = strings.Replace(meth.DefPath, name, name + ":" + item.Type, 1)
 	}
 
 	if len(meth.QueryParam) > 0 {
@@ -240,6 +246,8 @@ func genOperationGroup(path string, ops []Op, conf *config) {
 	var oplist	opers
 
 	oplist.Methods = ops
+	oplist.Package = ops[0].Package
+	oplist.ServiceName = ops[0].ServiceName
 	raw, err := ioutil.ReadFile("template/" + conf.OperationTemplate)
 	if err != nil {
 		fmt.Println(err)
@@ -256,7 +264,10 @@ func genOperationGroup(path string, ops []Op, conf *config) {
 	opName = strings.TrimLeft(opName, "/")
 	opName = strings.Replace(opName, "/", "_", -1)
 	opName = strings.Replace(opName, "{", "", -1)
-	opName = strings.Replace(opName, "}", "", -1) + ".go"
+	opName = strings.Replace(opName, "}", "", -1)
+	oplist.GroupName = SnakeToCamel(opName)
+	opName += conf.Options.FileSuffix
+	oplist.Path = ops[0].Path
 	opFile, _ := os.Create(dir + "/" + opName)
 
 	err = templ.Execute(opFile, oplist)

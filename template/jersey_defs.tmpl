@@ -1,12 +1,41 @@
 // server structure definitions
-package main
+package {{.Package}}.endpoints;
 
-import (
-)
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+
+import org.springframework.stereotype.Component;
+
+import com.wordnik.swagger.annotations.ApiModel;
+import com.wordnik.swagger.annotations.ApiModelProperty;
 
 {{range .Definitions}}
-type {{.Name}} struct {
-	{{range .Members}}{{.Name}}	{{.Type}}	`sw.description:"{{.Description}}"{{if .Required}} sw.required:"true"{{end}}`
-	{{end}}
+@ApiModel(value = "{{.Name}}")
+@XmlRootElement(name = "{{FirstUpper .Name}}")
+@Component
+public class {{.Name}} {
+
+{{range .Members}}
+	@ApiModelProperty(value="{{FirstUpper .Name}}", required={{.Required}}, description="{{.Description}}")
+	@XmlElement(name = "{{FirstUpper .Name}}")
+	private {{JavaType .Type}} {{FirstLower .Name}};
+{{end}}
+
+	public {{FirstUpper .Name}}()
+	{
+		super()
+	}
+
+{{range .Members}}
+	public {{JavaType .Type}} get{{FirstUpper .Name}}() {
+		return {{FirstLower .Name}};
+	}
+
+	public void set{{FirstUpper .Name}}({{JavaType .Type}} {{FirstLower .Name}}) {
+		this.{{FirstLower .Name}} = {{FirstLower .Name}};
+	}
+{{end}}
 }
 {{end}}

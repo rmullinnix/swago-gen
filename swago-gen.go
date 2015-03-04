@@ -21,7 +21,8 @@ type config struct {
 }
 
 type configOptions struct {
-	namingConvention	string
+	NamingConvention	string		`json:"namingConvention,omitempty"`
+	FileSuffix		string		`json:"fileSuffix,omitempty"`
 }
 
 type swDocument struct {
@@ -31,6 +32,7 @@ type swDocument struct {
 
 type serviceDefinition struct {
 	ServiceName		string
+	Package			string
 	BasePath		string
 	Title			string
 	Description		string
@@ -46,15 +48,21 @@ type serviceDefinition struct {
 }
 
 type opers struct {
+	Path			string
+	Package			string
+	ServiceName		string
+	GroupName		string
 	Methods			[]Op
 }
 
 type Op struct {
 	ServiceName		string
+	Package			string
 	OperationId		string
 	LowerOperationId	string
 	HTTPMethod		string
 	Summary			string
+	Description		string
 	Notes			string
 	Path			string
 	DefPath			string
@@ -108,17 +116,20 @@ type props struct {
 var dir				string
 var basePath			string
 var funcMap			map[string]interface{}
+var javaType			map[string]string
 
 func main() {
 	filePtr := flag.String("file", "", "file to parse")
 	dirPtr := flag.String("dir", "", "directory to place generated files")
 	confPtr := flag.String("conf", "", "configuration file for framework")
+	pkgPtr := flag.String("package", "", "name of package")
 
 	flag.Parse()
 
 	file := *filePtr
 	confFile := *confPtr
 	dir = *dirPtr
+	pkgName := *pkgPtr
 
 	if len(file) == 0 {
 		fmt.Println("Error:  -file must be specified")
@@ -136,7 +147,6 @@ func main() {
 	}
 
 	conf, err := loadConfig(confFile)
-	fmt.Println(conf)
 	if err != nil {
 		fmt.Println("Error:  invalid configuration file (", err, ")")
 		os.Exit(1)
@@ -148,7 +158,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	funcMap = make(map[string]interface{}, 10)
+	funcMap = make(map[string]interface{}, 20)
 	funcMap["lenparms"] = lenparms
 	funcMap["lenresp"] = lenresp
 	funcMap["ArrayToString"] = ArrayToString
@@ -158,9 +168,18 @@ func main() {
 	funcMap["SnakeToCamel"] = SnakeToCamel
 	funcMap["LastPathItem"] = LastPathItem
 	funcMap["QuoteString"] = QuoteString
+	funcMap["JavaType"] = JavaType
+	funcMap["JavaMediaType"] = JavaMediaType
+
+	javaType = make(map[string]string)
+	javaType["string"] = "String"
+	javaType["int"] = "Integer"
+	javaType["bool"] = "boolean"
+	javaType["[]string"] = "String[]"
+	javaType["[]int"] = "Integer[]"
 
 	if swDoc.version == "2.0"  {
-		err = swagger20Spec(swDoc.docJson, conf)
+		err = swagger20Spec(swDoc.docJson, conf, pkgName)
 	} else if swDoc.version == "1.2" {
 	}
 
@@ -182,6 +201,7 @@ func loadConfig(confFile string) (*config, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("options <", conf.Options, ">")
 	return conf, nil
 }
 
@@ -192,7 +212,9 @@ func parseFile(fileName string) (*swDocument, error) {
 	parser = JSONParse.NewJSONParser(fileName, 10, "error")
 	valDoc, errs := parser.Parse()
 	if !valDoc {
-		fmt.Println(errs)
+		for i := range errs {
+			parser.OutputError(errs[i])
+		}
 		return nil, errors.New("errors encountered parsing file")
 	}
 
@@ -251,9 +273,10 @@ func SnakeToCamel(val string) string {
 		index := strings.Index(val, "_")
 		if index > -1 {
 			if index + 1 < len(val) {
-				strings.ToUpper(val[index + 1:index + 2])
+				val = val[:index] + FirstUpper(val[index+1:])
+			} else {
+				val = val[:index] + val[index + 1:]
 			}
-			val = val[:index - 1] + val[index + 1:]
 		} else {
 			break
 		}
@@ -271,4 +294,25 @@ func LastPathItem(path string) string {
 
 func QuoteString(val string) string {
 	return strconv.Quote(val)
+}
+
+func JavaType(val string) string {
+	key, found := javaType[val]
+	if !found {
+		if val[:2] == "[]"  {
+			val = val[2:] + val[:2]
+		}
+		return val
+	} else {
+		return key
+	}
+}
+
+func JavaMediaType(val []string) string {
+	newval := make([]string, len(val))
+	for i := range val {
+		newval[i] = "MediaType." + strings.ToUpper(val[i])
+		newval[i] = strings.Replace(newval[i], "/" , "_", -1)
+	}
+	return strings.Join(newval, ",")
 }

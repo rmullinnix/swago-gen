@@ -1,0 +1,30 @@
+// client library
+
+package {{.ServiceName}}
+
+import (
+        "encoding/json"
+        "net/http"
+)
+{{range .Methods}}{{$lenp := lenparms .Params 1}}{{$lens := len .Schema}}
+func {{FirstUpper .OperationId}}({{range $index, $element := .Params}}{{.Name}} {{.Type}}{{if lt $index $lenp}}, {{end}}{{end}}) {{.Schema}} {
+	{{if gt $lens 0}}var output {{.Schema}}{{end}}	
+
+        buf, _ := json.Marshal(consul)
+
+        client := &http.Client{}
+        request, err := http.NewRequest("{{.HTTPMethod}}", "{{.BasePath}}/{{.Path}}", strings.NewReader(string(buf)))
+        if err != nil {
+                return err
+        }
+
+        response, err := client.Do(request)
+        defer response.Body.Close()
+        if err != nil {
+                return err
+        }
+
+
+	{{if gt $lens 0}}return output {{.Schema}}{{end}}	
+}
+{{end}}
