@@ -62,6 +62,7 @@ func swagger20Spec(strJson string, conf *config, pkgName string) error {
 func gen20TemplateStruct(swSpec *SwaggerAPI20, conf *config, pkgName string) *serviceDefinition {
 	svc := new(serviceDefinition)
 	svc.Methods = make([]Op, 0)
+	svc.Tags = make([]TagItem, 0)
 
 	svc.ServiceName = RemoveSpace(swSpec.Info.Title)
 	svc.Package = pkgName
@@ -75,6 +76,7 @@ func gen20TemplateStruct(swSpec *SwaggerAPI20, conf *config, pkgName string) *se
 	svc.ContactUrl = swSpec.Info.Contact.Url
 	svc.ContactEmail = swSpec.Info.Contact.Email
 	svc.LicenseName = swSpec.Info.License.Name
+	svc.SwaggerEndPoint = swSpec.XSwaggerEndPoint
 
 	for key, path := range swSpec.Paths {
 		ops := make([]Op, 0)
@@ -127,6 +129,15 @@ func gen20TemplateStruct(swSpec *SwaggerAPI20, conf *config, pkgName string) *se
 	for key, definition := range swSpec.Definitions {
 		defItem := populateDefinition(key, definition)
 		svc.Definitions = append(svc.Definitions, *defItem)
+	}
+
+	for i := range swSpec.Tags {
+		tagItem := new(TagItem)
+		tagItem.Name = swSpec.Tags[i].Name
+		tagItem.Description = swSpec.Tags[i].Description
+		tagItem.ExtDocUrl = swSpec.Tags[i].ExternalDocs.Url
+		tagItem.ExtDocDesc = swSpec.Tags[i].ExternalDocs.Description
+		svc.Tags = append(svc.Tags, *tagItem)
 	}
 
 	return svc

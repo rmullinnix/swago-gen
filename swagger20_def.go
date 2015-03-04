@@ -22,6 +22,7 @@ type SwaggerAPI20 struct {
 	Security	*SecurityRequirement	`json:"security,omitempty" sw.description:"A declaration of which security schemes are applied for the API as a whole. The list of values describes alternative security schemes that can be used (that is, there is a logical OR between the security requirements). Individual operations can override this definition."`
 	Tags		[]Tag			`json:"tags,omitempty" sw.description:"A list of tags used by the specification with additional metadata. The order of the tags can be used to reflect on their order by the parsing tools. Not all tags that are used by the Operation Object must be declared. The tags that are not declared may be organized randomly or based on the tools' logic. Each tag name in the list MUST be unique."`
 	ExternalDocs	*ExtDocObject		`json:"externalDocs,omitempty" sw.description:"Additional external documentation."`
+	XSwaggerEndPoint	string		`json:"x-swaggerendpoint,omitempty"`
 }
 
 // The object provides metadata about the API. The metadata can be used by the clients if needed,

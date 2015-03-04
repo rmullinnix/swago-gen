@@ -40,11 +40,20 @@ type serviceDefinition struct {
 	ContactUrl		string
 	ContactEmail		string
 	LicenseName		string
+	SwaggerEndPoint		string
 	Consumes		[]string
 	Produces		[]string
+	Tags			[]TagItem
 	Methods			[]Op
 	SecurityDefs		[]sec
 	Definitions		[]def
+}
+
+type TagItem struct {
+	Name			string
+	Description		string
+	ExtDocUrl		string
+	ExtDocDesc		string
 }
 
 type opers struct {

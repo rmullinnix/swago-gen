@@ -16,10 +16,11 @@ import (
 type {{.ServiceName}}Service struct {
 	gorest.RestService      `root:"{{.BasePath}}" consumes:"{{ArrayToString .Consumes}}"
 				  produces:"{{ArrayToString .Produces}}"
-				  swagger:"/swagger" sw.apiVersion:"{{.ServiceVersion}}"
+				  swagger:"{{.SwaggerEndPoint}}" sw.apiVersion:"{{.ServiceVersion}}"
 				  sw.title:"{{.Title}}" sw.licenseName:"{{.LicenseName}}"
 				  sw.description:{{QuoteString .Description}}
-				  sw.contactUrl:"{{.ContactUrl}}" sw.contactEmail:"{{.ContactEmail}}"`
+				  sw.contactUrl:"{{.ContactUrl}}" sw.contactEmail:"{{.ContactEmail}}"
+				  sw.tags:"{{range .Tags}}{{$meta_left}}{{.Name}}:{{.Description}}{{$meta_right}},{{end}}"`
 	{{range .SecurityDefs}}{{.Key}}	gorest.Security `mode:"{{.Mode}}" location:"{{.Location}}" name:"{{.Name}}" prefix:"{{.Prefix}}"`
 	{{end}}{{range .Methods}}{{$lens := len .Schema}}{{$lenr := lenresp .Responses 1}}{{$lensec := len .Security}}
 		{{FirstLower .OperationId}}	gorest.EndPoint `method:"{{.HTTPMethod}}" path:"{{.DefPath}}" {{if gt $lens 0}}output:"{{.Schema}}"{{end}} {{range .BodyParam}}postdata:"{{.Type}}"{{end}} {{if gt $lensec 0}}security:"{{.Security}}"{{end}}
