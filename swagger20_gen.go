@@ -81,38 +81,36 @@ func gen20TemplateStruct(swSpec *SwaggerAPI20, conf *config, pkgName string) *se
 	for key, path := range swSpec.Paths {
 		ops := make([]Op, 0)
 		if path.Get != nil {
-			meth := populateOperation(key, path.Get)
-			meth.HTTPMethod = "GET"
-			meth.ServiceName = svc.ServiceName
-			meth.Package = svc.Package
-			svc.Methods = append(svc.Methods, *meth)
-			ops = append(ops, *meth)
+			meth := populateOperation(svc.ServiceName, svc.Package, key, "GET", path.Get)
+			if meth != nil {
+				svc.Methods = append(svc.Methods, *meth)
+				ops = append(ops, *meth)
+			}
 		}
 		if path.Put != nil {
-			meth := populateOperation(key, path.Put)
-			meth.HTTPMethod = "PUT"
-			meth.ServiceName = svc.ServiceName
-			meth.Package = svc.Package
-			svc.Methods = append(svc.Methods, *meth)
-			ops = append(ops, *meth)
+			meth := populateOperation(svc.ServiceName, svc.Package, key, "PUT", path.Put)
+			if meth != nil {
+				svc.Methods = append(svc.Methods, *meth)
+				ops = append(ops, *meth)
+			}
 		}
 		if path.Post != nil {
-			meth := populateOperation(key, path.Post)
-			meth.HTTPMethod = "POST"
-			meth.ServiceName = svc.ServiceName
-			meth.Package = svc.Package
-			svc.Methods = append(svc.Methods, *meth)
-			ops = append(ops, *meth)
+			meth := populateOperation(svc.ServiceName, svc.Package, key, "POST", path.Post)
+			if meth != nil {
+				svc.Methods = append(svc.Methods, *meth)
+				ops = append(ops, *meth)
+			}
 		}
 		if path.Delete != nil {
-			meth := populateOperation(key, path.Delete)
-			meth.HTTPMethod = "DELETE"
-			meth.ServiceName = svc.ServiceName
-			meth.Package = svc.Package
-			svc.Methods = append(svc.Methods, *meth)
-			ops = append(ops, *meth)
+			meth := populateOperation(svc.ServiceName, svc.Package, key, "DELETE", path.Delete)
+			if meth != nil {
+				svc.Methods = append(svc.Methods, *meth)
+				ops = append(ops, *meth)
+			}
 		}
-		genOperationGroup(key, ops, conf)
+		if len(ops) > 0 {
+			genOperationGroup(key, ops, conf)
+		}
 	}
 
 	for key, secDef := range swSpec.SecurityDefs {
@@ -143,9 +141,19 @@ func gen20TemplateStruct(swSpec *SwaggerAPI20, conf *config, pkgName string) *se
 	return svc
 }
 
-func populateOperation(key string, op *OperationObject) *Op {
+func populateOperation(svcName string, pkg string, key string, method string, op *OperationObject) *Op {
+	for i := range op.Consumes {
+		if op.Consumes[i] == "application/x-www-form-urlencoded" || op.Consumes[i] == "multipart/form-data" {
+			fmt.Println(op.Consumes[i], "not supported: operation dropped")
+			return nil
+		}
+	}
+
 	meth := new(Op)
 
+	meth.HTTPMethod = method
+	meth.ServiceName = svcName
+	meth.Package = pkg
 	meth.OperationId = RemoveSpace(op.OperationId)
 	meth.Summary = op.Summary
 	meth.Description = op.Description
@@ -163,6 +171,9 @@ func populateOperation(key string, op *OperationObject) *Op {
 	for i := range meth.PathParam {
 		item := meth.PathParam[i]
 		name := FirstUpper(item.Name)
+		if strings.Index(meth.DefPath, name) == -1 {
+			name = FirstLower(item.Name)
+		}
 
 		meth.DefPath = strings.Replace(meth.DefPath, name, name + ":" + item.Type, 1)
 	}
@@ -199,6 +210,17 @@ func populateResponses(meth *Op, op *OperationObject) []response {
 				meth.Schema = LastPathItem(item.Schema.Ref)
 			} else if item.Schema.Type == "array"  {
 				meth.Schema = "[]" + LastPathItem(item.Schema.Items.Ref)
+			} else if item.Schema.Type == "object" {
+				// map[string]additionalProperties - strange schema choice
+				if item.Schema.AdditionalProps.Ref == "" {
+					valType	:= item.Schema.AdditionalProps.Type
+					if valType == "integer" {
+						valType = "int"
+					}
+					meth.Schema = "map[string]" + valType
+				} else {
+					meth.Schema = "map[string]" + LastPathItem(item.Schema.AdditionalProps.Ref)
+				}
 			} else {
 				meth.Schema = item.Schema.Type
 			}

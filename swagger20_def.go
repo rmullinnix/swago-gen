@@ -201,6 +201,7 @@ type SchemaObject struct {
 	MaxItems	int32			`json:"maxItems,omitempty"`
 	MinItems	int32			`json:"minItems,omitempty"`
 	Properties	map[string]SchemaObject	`json:"properties,omitempty"`
+	AdditionalProps	*SchemaObject		`json:"additionalProperties,omitempty"`
 	MaxProperties	int32			`json:"maxProperties,omitempty"`
 	MinProperties	int32			`json:"minProperties,omitempty"`
 	AllOf		*SchemaObject		`json:"allOf,omitempty"`

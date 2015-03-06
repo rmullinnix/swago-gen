@@ -14,8 +14,7 @@ import (
 
 // service definition
 type {{.ServiceName}}Service struct {
-	gorest.RestService      `root:"{{.BasePath}}" consumes:"{{ArrayToString .Consumes}}"
-				  produces:"{{ArrayToString .Produces}}"
+	gorest.RestService      `root:"{{.BasePath}}" consumes:"{{ArrayToString .Consumes}}" produces:"{{ArrayToString .Produces}}"
 				  swagger:"{{.SwaggerEndPoint}}" sw.apiVersion:"{{.ServiceVersion}}"
 				  sw.title:"{{.Title}}" sw.licenseName:"{{.LicenseName}}"
 				  sw.description:{{QuoteString .Description}}
@@ -23,7 +22,8 @@ type {{.ServiceName}}Service struct {
 				  sw.tags:"{{range .Tags}}{{$meta_left}}{{.Name}}:{{.Description}}{{$meta_right}},{{end}}"`
 	{{range .SecurityDefs}}{{.Key}}	gorest.Security `mode:"{{.Mode}}" location:"{{.Location}}" name:"{{.Name}}" prefix:"{{.Prefix}}"`
 	{{end}}{{range .Methods}}{{$lens := len .Schema}}{{$lenr := lenresp .Responses 1}}{{$lensec := len .Security}}
-		{{FirstLower .OperationId}}	gorest.EndPoint `method:"{{.HTTPMethod}}" path:"{{.DefPath}}" {{if gt $lens 0}}output:"{{.Schema}}"{{end}} {{range .BodyParam}}postdata:"{{.Type}}"{{end}} {{if gt $lensec 0}}security:"{{.Security}}"{{end}}
+	{{FirstLower .OperationId}}	gorest.EndPoint `method:"{{.HTTPMethod}}" path:"{{.DefPath}}" {{if gt $lens 0}}output:"{{.Schema}}"{{end}} {{range .BodyParam}}postdata:"{{.Type}}"{{end}} {{if gt $lensec 0}}security:"{{.Security}}"{{end}}
+					  consumes:"{{ArrayToString .Consumes}}" produces:"{{ArrayToString .Produces}}"
 					  sw.summary:"{{.Summary}}"
 					  sw.notes:"{{.Notes}}"
 					  sw.nickname:"{{.OperationId}}" sw.tags:"{{ArrayToString .Tags}}"
@@ -43,10 +43,11 @@ func main() {
 
         logger.Init(*logPtr)
 
-	// gorest.RegisterRealmAuthorizer("{{.ServiceName}}", authorize.ResourceAuthorizer)
-
 	gorest.RegisterDocumentor("swagger", swagger.NewSwaggerDocumentor("2.0"))
 
+	// register authorizers - DefaultAuthorizer should be replaced with security implementation
+	{{range .SecurityDefs}}gorest.RegisterAuthorizer("{{.Key}}", gorest.DefaultAuthorizer)
+	{{end}}
         gorest.RegisterService(new({{.ServiceName}}Service))
 
         http.Handle("/", gorest.Handle())
